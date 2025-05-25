@@ -1,3 +1,22 @@
+"""
+程式名稱: Q-Learning 平衡遊戲 (Balance Game with Q-Learning and Pygame)
+
+用途與目的:
+本程式利用 Q-Learning 強化學習演算法，讓智能體(agent)學習如何在一維空間中保持物體於畫面中央。遊戲畫面以 Pygame 顯示，紅色方塊代表物體，智能體可選擇向左或向右移動物體。目標是讓物體盡可能維持在畫面中央區域。
+
+演算法說明:
+- 環境 (BalanceEnvironment): 定義物體的位置(state)與移動規則，並根據物體是否位於中央區域給予獎勵(reward)。
+- 智能體 (QLearningAgent): 使用 Q-Learning 演算法，根據 Q-table 決定每個狀態下的最佳動作。智能體會在探索(exploration)與利用(exploitation)間切換，並逐步降低探索率。
+- 主程式: 執行多個回合(episodes)，每回合智能體與環境互動並更新 Q-table，並以 Pygame 視覺化過程。
+
+Q-Learning 主要步驟:
+1. 初始化 Q-table。
+2. 在每個狀態下，根據探索率選擇動作(隨機或最大 Q-value)。
+3. 執行動作，取得新狀態與獎勵。
+4. 更新 Q-table。
+5. 重複直到回合結束，並逐步降低探索率。
+"""
+
 import pygame
 import numpy as np
 import random
@@ -78,7 +97,7 @@ def main():
 
         while not env.done:
             # Visualize
-            screen.fill((0, 0, 0))
+            screen.fill((250, 250, 250))
             pygame.draw.rect(screen, (255, 0, 0), (env.state, screen_height // 2, 10, 10))
             pygame.display.flip()
 
