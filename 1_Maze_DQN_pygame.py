@@ -2,7 +2,6 @@ import numpy as np
 import random
 import pygame
 import pickle  # Add this import for saving/loading Q-table
-import time  # Add this import for timestamping filenames
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -54,102 +53,87 @@ class MazeEnvironment:
     def reset(self):
         self.state = self.start
         return self.state
-
 # Agent
-class QLearningAgent:
-    def __init__(self, state_space, action_space, learning_rate=0.1, discount_factor=0.9, exploration_rate=1.0):
-        self.q_table = np.zeros(state_space + (action_space,))
-        self.learning_rate = learning_rate
-        self.discount_factor = discount_factor
-        self.exploration_rate = exploration_rate
-        self.exploration_decay = 0.995
-        self.min_exploration_rate = 0.01
+import collections
 
-    def choose_action(self, state):
-        if random.uniform(0, 1) < self.exploration_rate:
-            return random.choice([0, 1, 2, 3])  # Explore
-        return np.argmax(self.q_table[state])  # Exploit
-
-    def update(self, state, action, reward, next_state):
-        max_q = np.max(self.q_table[next_state])
-        self.q_table[state][action] += self.learning_rate * (
-            reward + self.discount_factor * max_q - self.q_table[state][action]
-        )
-
-    def decay_exploration(self):
-        self.exploration_rate = max(self.min_exploration_rate, self.exploration_rate * self.exploration_decay)
-
-# DQN Model
 class DQN(nn.Module):
-    def __init__(self, input_dim, output_dim):
+    def __init__(self, state_dim, action_dim):
         super(DQN, self).__init__()
-        self.fc = nn.Sequential(
-            nn.Linear(input_dim, 128),
-            nn.ReLU(),
-            nn.Linear(128, 128),
-            nn.ReLU(),
-            nn.Linear(128, output_dim)
-        )
+        self.fc1 = nn.Linear(state_dim, 128)
+        self.fc2 = nn.Linear(128, 128)
+        self.fc3 = nn.Linear(128, action_dim)
 
     def forward(self, x):
-        return self.fc(x)
+        x = torch.relu(self.fc1(x))
+        x = torch.relu(self.fc2(x))
+        return self.fc3(x)
 
-# DQN Agent
 class DQNAgent:
-    def __init__(self, state_space, action_space, learning_rate=0.001, discount_factor=0.99, exploration_rate=1.0):
-        self.state_space = state_space
-        self.action_space = action_space
-        self.model = DQN(state_space[0] * state_space[1], action_space)
-        self.target_model = DQN(state_space[0] * state_space[1], action_space)
-        self.optimizer = optim.Adam(self.model.parameters(), lr=learning_rate)
-        self.criterion = nn.MSELoss()
-        self.discount_factor = discount_factor
-        self.exploration_rate = exploration_rate
-        self.exploration_decay = 0.995
-        self.min_exploration_rate = 0.01
-        self.memory = []
-        self.batch_size = 64
+    def __init__(self, state_space, action_space, memory_size=10000, batch_size=64, gamma=0.99, lr=1e-3, epsilon=1.0, epsilon_min=0.01, epsilon_decay=0.995, target_update=10):
+        self.state_dim = state_space[0] * state_space[1]
+        self.action_dim = action_space
+        self.memory = collections.deque(maxlen=memory_size)
+        self.batch_size = batch_size
+        self.gamma = gamma
+        self.epsilon = epsilon
+        self.epsilon_min = epsilon_min
+        self.epsilon_decay = epsilon_decay
+        self.target_update = target_update
+        self.learn_step = 0
+
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        self.model = DQN(self.state_dim, self.action_dim).to(self.device)
+        self.target_model = DQN(self.state_dim, self.action_dim).to(self.device)
+        self.target_model.load_state_dict(self.model.state_dict())
+        self.optimizer = optim.Adam(self.model.parameters(), lr=lr)
+        self.loss_fn = nn.MSELoss()
 
     def choose_action(self, state):
-        if random.uniform(0, 1) < self.exploration_rate:
-            return random.choice(range(self.action_space))  # Explore
-        state_tensor = torch.FloatTensor(state).unsqueeze(0)
+        if np.random.rand() < self.epsilon:
+            return np.random.randint(self.action_dim)
+        state = torch.FloatTensor(state).unsqueeze(0).to(self.device)
         with torch.no_grad():
-            return torch.argmax(self.model(state_tensor)).item()  # Exploit
+            q_values = self.model(state)
+        return q_values.argmax().item()
 
     def store_transition(self, state, action, reward, next_state, done):
         self.memory.append((state, action, reward, next_state, done))
-        if len(self.memory) > 10000:  # Limit memory size
-            self.memory.pop(0)
 
     def update(self):
         if len(self.memory) < self.batch_size:
             return
-
         batch = random.sample(self.memory, self.batch_size)
         states, actions, rewards, next_states, dones = zip(*batch)
+        states = torch.FloatTensor(states).to(self.device)
+        actions = torch.LongTensor(actions).unsqueeze(1).to(self.device)
+        rewards = torch.FloatTensor(rewards).unsqueeze(1).to(self.device)
+        next_states = torch.FloatTensor(next_states).to(self.device)
+        dones = torch.FloatTensor(dones).unsqueeze(1).to(self.device)
 
-        states = torch.FloatTensor(states)
-        actions = torch.LongTensor(actions).unsqueeze(1)
-        rewards = torch.FloatTensor(rewards)
-        next_states = torch.FloatTensor(next_states)
-        dones = torch.FloatTensor(dones)
-
-        q_values = self.model(states).gather(1, actions).squeeze()
+        q_values = self.model(states).gather(1, actions)
         with torch.no_grad():
-            max_next_q_values = self.target_model(next_states).max(1)[0]
-            target_q_values = rewards + self.discount_factor * max_next_q_values * (1 - dones)
-
-        loss = self.criterion(q_values, target_q_values)
+            next_q_values = self.target_model(next_states).max(1, keepdim=True)[0]
+            target_q = rewards + self.gamma * next_q_values * (1 - dones)
+        loss = self.loss_fn(q_values, target_q)
         self.optimizer.zero_grad()
         loss.backward()
         self.optimizer.step()
+        self.learn_step += 1
 
     def update_target_model(self):
         self.target_model.load_state_dict(self.model.state_dict())
 
     def decay_exploration(self):
-        self.exploration_rate = max(self.min_exploration_rate, self.exploration_rate * self.exploration_decay)
+        if self.epsilon > self.epsilon_min:
+            self.epsilon *= self.epsilon_decay
+
+# 將 state 轉換為 one-hot 向量
+
+def state_to_onehot(state, maze_size):
+    onehot = np.zeros(maze_size * maze_size, dtype=np.float32)
+    idx = state[0] * maze_size + state[1]
+    onehot[idx] = 1.0
+    return onehot
 
 # Main Program
 def main():
@@ -160,18 +144,14 @@ def main():
     pygame.display.set_caption("DQN Maze")
 
     env = MazeEnvironment(maze_size=maze_size)
-    use_dqn = True  # Set to True to use DQN, False for Q-Learning
 
-    if use_dqn:
-        agent = DQNAgent(state_space=(maze_size, maze_size), action_space=4)
-    else:
-        agent = QLearningAgent(state_space=(maze_size, maze_size), action_space=4)
+    agent = DQNAgent(state_space=(maze_size, maze_size), action_space=4)
 
     clock = pygame.time.Clock()
     episodes = 500
     for episode in range(episodes):
         state = env.reset()
-        state_flat = np.array(state).flatten()  # Flatten state for DQN
+        state_onehot = state_to_onehot(state, maze_size)  # 修正：用 one-hot
         total_reward = 0
 
         while True:
@@ -186,29 +166,23 @@ def main():
             pygame.display.flip()
 
             # Agent chooses action
-            action = agent.choose_action(state_flat)
+            action = agent.choose_action(state_onehot)
             next_state, reward, done = env.step(action)
-            next_state_flat = np.array(next_state).flatten()
+            next_state_onehot = state_to_onehot(next_state, maze_size)
 
-            if use_dqn:
-                agent.store_transition(state_flat, action, reward, next_state_flat, done)
-                agent.update()
-            else:
-                agent.update(state, action, reward, next_state)
-
+            agent.store_transition(state_onehot, action, reward, next_state_onehot, done)
+            agent.update()
+            
             state = next_state
-            state_flat = next_state_flat
+            state_onehot = next_state_onehot
             total_reward += reward
 
             if done:
                 break
-
             # Control frame rate
             clock.tick(30)
 
-        if use_dqn and episode % 10 == 0:
-            agent.update_target_model()
-
+        agent.update_target_model()
         agent.decay_exploration()
         print(f"Episode {episode + 1}: Total Reward = {total_reward}")
 
@@ -250,11 +224,3 @@ def visualize_final_path(env, screen, cell_size, q_table_path, maze_path):
 
 if __name__ == "__main__":
     main()
-    '''
-    visualize_final_path(MazeEnvironment(maze_size=10), 
-                         QLearningAgent(state_space=(10, 10), action_space=4), 
-                                        60,
-                                        "q_table_20250524-130913.pkl",
-                                        "maze_20250524-130913.pkl")
-                                        '''
-
