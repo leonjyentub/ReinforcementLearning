@@ -249,10 +249,12 @@ def visualize_final_path(env, screen, cell_size, q_table_path, maze_path):
     pygame.quit()
 
 if __name__ == "__main__":
-    #main()
+    main()
+    '''
     visualize_final_path(MazeEnvironment(maze_size=10), 
                          QLearningAgent(state_space=(10, 10), action_space=4), 
                                         60,
                                         "q_table_20250524-130913.pkl",
                                         "maze_20250524-130913.pkl")
+                                        '''
 
