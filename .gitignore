@@ -8,7 +8,5 @@ wheels/
 
 # Virtual environments
 .venv
-maze_20250524-130913.pkl
-q_table_20250524-130913.pkl
-Recording 2025-05-24 113616.mp4
-Recording 2025-05-24 115320.mp4
+*.pkl
+*.mp4
