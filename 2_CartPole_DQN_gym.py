@@ -77,7 +77,7 @@ class DQNAgent:
     def update_target(self):
         self.target_net.load_state_dict(self.policy_net.state_dict())
 
-def main():
+def main_default():
     env = gym.make("CartPole-v1", render_mode="human")
     state_dim = env.observation_space.shape[0]
     action_dim = env.action_space.n
@@ -114,6 +114,40 @@ def main():
             agent.update_target()
             print(f"同步 target network (第 {episode + 1} 回合)")
 
+    env.close()
+
+
+def main():
+    env = gym.make("CartPole-v1", render_mode="human")
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+    agent = DQNAgent(state_dim, action_dim)
+    num_episodes = 300
+    target_update_freq = 10
+
+    for episode in range(1, num_episodes + 1):
+        state, info = env.reset()
+        total_reward = 0
+        done = False
+        truncated = False
+        step = 0
+        while not (done or truncated):
+            env.render()
+            action = agent.select_action(state)
+            next_state, reward, done, truncated, info = env.step(action)
+            agent.store(state, action, reward, next_state, done or truncated)
+            agent.update()
+            # 中文說明
+            action_str = "向左移動" if action == 0 else "向右移動"
+            obs_str = f"推車位置: {next_state[0]:.2f}, 速度: {next_state[1]:.2f}, 棒子角度: {next_state[2]:.2f}, 角速度: {next_state[3]:.2f}"
+            print(f"回合: {episode}，動作: {action_str}，觀察值: [{obs_str}]，獎勵: {reward}")
+            state = next_state
+            total_reward += reward
+            step += 1
+        if episode % target_update_freq == 0:
+            agent.update_target()
+        if done or truncated:
+            print(f"第 {episode} 回合結束，已經失去平衡，重新開始！")
     env.close()
 
 
