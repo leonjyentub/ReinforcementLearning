@@ -17,12 +17,9 @@ device = 'cuda' if torch.cuda.is_available() else 'cpu'
 install: pip install ale-py
 
 Once installed you can import the native ALE interface as ale_py
-
-from ale_py import ALEInterface
-ale = ALEInterface()
-
 '''
 import ale_py
+
 gym.register_envs(ale_py)
 
 def preprocess_frame(frame): 
@@ -159,8 +156,9 @@ class Agent():
     
 if __name__ == "__main__":
     env = gym.make('ALE/Pong-v5', render_mode='human')
-    #env = gym.make('ALE/Assault-v5', render_mode='human')
-
+    print(env.spec.id)
+    print(env.observation_space)
+    print(env.action_space)
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
     agent = Agent(state_size, action_size)

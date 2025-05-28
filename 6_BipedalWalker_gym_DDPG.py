@@ -167,7 +167,7 @@ def train_qlearning(env, episodes=1000):
         agent.decay_epsilon()
         print(f"Episode {ep}, Total Reward: {total_reward}, Epsilon: {agent.epsilon:.3f}")
 
-def train_ddpg(env, episodes=1000):
+def train_ddpg(env, episodes=5000):
     obs_dim = env.observation_space.shape[0]
     act_dim = env.action_space.shape[0]
     act_limit = float(env.action_space.high[0])
