@@ -25,8 +25,9 @@ RED = (255, 0, 0)
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Tic Tac Toe RL')
-# 使用微軟正黑體顯示中文
-font = pygame.font.SysFont("Microsoft JhengHei", 56)
+# 載入mac的中文字型
+#font = pygame.font.Font(None, 36)
+font = pygame.font.Font("/System/Library/Fonts/STHeiti Light.ttc", 36)
 
 def draw_board(board):
     screen.fill(WHITE)
@@ -150,7 +151,6 @@ class DQNAgent:
         next_states = torch.stack([self._board_to_tensor(s) for s in next_states]).to(self.device)
         actions_idx = [a[0]*3+a[1] for a in actions]
         actions_idx = torch.tensor(actions_idx, dtype=torch.long).unsqueeze(1).to(self.device)
-        #actions_idx = torch.tensor(actions_idx, dtype=torch.long).to(self.device).unsqueeze(1)
         rewards = torch.tensor(rewards, dtype=torch.float32).unsqueeze(1).to(self.device)
         dones = torch.tensor(dones, dtype=torch.float32).unsqueeze(1).to(self.device)
     
@@ -228,12 +228,13 @@ def play_game(agent1, agent2, train=True, show=False, delay=0.5):
         player = 1 - player
 
 def show_winner(winner):
+    LIGHT_GRAY = (200, 200, 200)
     if winner == 1:
-        text = font.render("Q-learning Agent 獲勝", True, RED)
+        text = font.render("Q-learning Agent 獲勝", True, LIGHT_GRAY, BLACK)
     elif winner == 2:
-        text = font.render("DQN Agent 獲勝", True, RED)
+        text = font.render("DQN Agent 獲勝", True, LIGHT_GRAY, BLACK)
     else:
-        text = font.render("平手", True, RED)
+        text = font.render("平手", True, LIGHT_GRAY, BLACK)
     screen.blit(text, (WIDTH // 2 - text.get_width() // 2, HEIGHT // 2 - text.get_height() // 2))
     pygame.display.update()
     time.sleep(2)
@@ -244,7 +245,7 @@ def main():
     agent1 = QLearningAgent(1)
     agent2 = DQNAgent(2)
     print("訓練中...")
-    for i in range(5000):
+    for i in range(3000):
         play_game(agent1, agent2, train=True, show=False)
     print("訓練完成，AI 對戰展示：")
     while True:
