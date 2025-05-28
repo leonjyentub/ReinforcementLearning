@@ -159,7 +159,7 @@ class Agent():
     
 if __name__ == "__main__":
     env = gym.make('ALE/Pong-v5', render_mode='human')
-    # env = gym.make('ALE/Pong-v5', render_mode='rgb_array')  # 如果需要 RGB 圖像輸出
+    #env = gym.make('ALE/Assault-v5', render_mode='human')
 
     state_size = env.observation_space.shape[0]
     action_size = env.action_space.n
