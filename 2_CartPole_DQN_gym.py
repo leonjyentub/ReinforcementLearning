@@ -79,18 +79,41 @@ class DQNAgent:
 
 def main():
     env = gym.make("CartPole-v1", render_mode="human")
-    observation, info = env.reset(seed=42)
-    for epoch in range(100):
-        env.render()
-        action = env.action_space.sample()
-        observation, reward, terminated, truncated, info = env.step(action)
-        if terminated or truncated:
-            print(f"第 {epoch + 1} 回合結束，已經失去平衡，重新開始！")
-            observation, info = env.reset()
-        # 中文說明
-        action_str = "向左移動" if action == 0 else "向右移動"
-        obs_str = f"推車位置: {observation[0]:.2f}, 速度: {observation[1]:.2f}, 棒子角度: {observation[2]:.2f}, 角速度: {observation[3]:.2f}"
-        print(f"回合: {epoch+1}，動作: {action_str}，觀察值: [{obs_str}]，獎勵: {reward}")
+    state_dim = env.observation_space.shape[0]
+    action_dim = env.action_space.n
+    agent = DQNAgent(state_dim, action_dim)
+    num_episodes = 100
+    target_update_freq = 10
+
+    for episode in range(num_episodes):
+        observation, info = env.reset(seed=None)
+        total_reward = 0
+        done = False
+        step = 0
+        while not done:
+            env.render()
+            action = agent.select_action(observation)
+            next_observation, reward, terminated, truncated, info = env.step(action)
+            done = terminated or truncated
+            agent.store(observation, action, reward, next_observation, done)
+            agent.update()
+            observation = next_observation
+            total_reward += reward
+            step += 1
+
+            # 中文說明
+            action_str = "向左移動" if action == 0 else "向右移動"
+            obs_str = f"推車位置: {observation[0]:.2f}, 速度: {observation[1]:.2f}, 棒子角度: {observation[2]:.2f}, 角速度: {observation[3]:.2f}"
+            print(f"回合: {episode+1}，步驟: {step}，動作: {action_str}，觀察值: [{obs_str}]，獎勵: {reward}")
+
+            if done:
+                print(f"第 {episode + 1} 回合結束，總獎勵: {total_reward}，已經失去平衡，重新開始！")
+                break
+
+        if (episode + 1) % target_update_freq == 0:
+            agent.update_target()
+            print(f"同步 target network (第 {episode + 1} 回合)")
+
     env.close()
 
 
