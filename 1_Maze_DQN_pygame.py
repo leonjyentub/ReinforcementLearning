@@ -144,7 +144,9 @@ def main():
     pygame.display.set_caption("DQN Maze")
 
     env = MazeEnvironment(maze_size=maze_size)
-
+    # 將env.maze 透過pickle儲存
+    with open("maze.pkl", "wb") as f:
+        pickle.dump(env.maze, f)
     agent = DQNAgent(state_space=(maze_size, maze_size), action_space=4)
 
     clock = pygame.time.Clock()
@@ -185,41 +187,10 @@ def main():
         agent.update_target_model()
         agent.decay_exploration()
         print(f"Episode {episode + 1}: Total Reward = {total_reward}")
+    # 將最後的訓練結果儲存到檔案
+    with open("dqn_agent.pkl", "wb") as f:
+        pickle.dump(agent, f)
 
-    pygame.quit()
-
-def visualize_final_path(env, screen, cell_size, q_table_path, maze_path):
-    # Load the Q-table and maze from the files
-    maze_size = 8
-    screen = pygame.display.set_mode((maze_size * cell_size, maze_size * cell_size))
-    pygame.display.set_caption("Q-Learning Maze")
-    with open(q_table_path, "rb") as f:
-        q_table = pickle.load(f)
-    with open(maze_path, "rb") as f:
-        env.maze = pickle.load(f)
-    print("Loaded Q-Table from", q_table_path)
-    print("Loaded Maze from", maze_path)
-
-    state = env.reset()
-    path = [state]
-    while state != env.goal:
-        action = np.argmax(q_table[state])  # Use the loaded Q-table
-        next_state, _, _ = env.step(action)
-        path.append(next_state)
-        state = next_state
-
-    # Visualize the path
-    screen.fill((0, 0, 0))
-    for x in range(env.maze_size):
-        for y in range(env.maze_size):
-            color = (255, 255, 255) if env.maze[x, y] == 0 else (0, 0, 255)
-            pygame.draw.rect(screen, color, (y * cell_size, x * cell_size, cell_size, cell_size))
-    pygame.draw.rect(screen, (0, 255, 0), (env.goal[1] * cell_size, env.goal[0] * cell_size, cell_size, cell_size))
-    for state in path:
-        pygame.draw.rect(screen, (255, 0, 0), (state[1] * cell_size, state[0] * cell_size, cell_size, cell_size))
-        pygame.display.flip()
-        pygame.time.delay(100)  # Delay to visualize the path step-by-step
-    
     pygame.quit()
 
 if __name__ == "__main__":
