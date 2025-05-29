@@ -20,8 +20,7 @@ num_actions = len(actions)
 Q = np.zeros((rows, cols, num_actions))
 
 # 定義 ε-greedy 參數
-epsilon = 0.1
-
+epsilon = 0.12
 # 定義 episodes 數
 num_episodes = 5000
 
@@ -53,14 +52,25 @@ for episode in range(num_episodes):
 
         # 取得 reward
         reward = rewards[next_state]
-
+        if episode > 20 and reward > 0.0:
+            pass
+        print(f"Episode {episode}, State: {state}, Action: {action_index}, Next State: {next_state}, Reward: {reward}")
+        print(f'Q-table-1: {np.round(Q, 4)}')
         # 更新 Q-value
-        Q[i, j, action_index] += alpha * (
-            reward + gamma * np.max(Q[next_state]) - Q[i, j, action_index]
-        )
+        print(f"updated Q-value: {alpha * (reward + gamma * np.max(Q[next_state]) - Q[i, j, action_index])}")
+        Q[i, j, action_index] += alpha * (reward + gamma * np.max(Q[next_state]) - Q[i, j, action_index])
 
+        print(f'Q-table-2: {np.round(Q, 4)}')
         # 移動到下一狀態
         state = next_state
+
+    '''
+    # 印出每個 episode 的 Q-table
+    for a in range(num_actions):
+        print(f"Action {a}:")
+        print(np.round(Q[:, :, a], 3))
+    input("Press Enter to continue to the next episode...")
+    '''
 
 # 計算最終 state-value function
 V = np.max(Q, axis=2)

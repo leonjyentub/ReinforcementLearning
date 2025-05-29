@@ -155,7 +155,7 @@ class Agent():
         return (states, actions, rewards, next_states, dones)
     
 if __name__ == "__main__":
-    env = gym.make('ALE/Pong-v5', render_mode='human')
+    env = gym.make('ALE/Assault-v5', render_mode='human')
     print(env.spec.id)
     print(env.observation_space)
     print(env.action_space)

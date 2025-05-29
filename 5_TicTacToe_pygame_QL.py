@@ -27,7 +27,9 @@ RED = (255, 0, 0)
 pygame.init()
 screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption('Tic Tac Toe RL')
-font = pygame.font.SysFont(None, 72)
+# 載入mac的中文字型
+#font = pygame.font.Font(None, 36)
+font = pygame.font.Font("/System/Library/Fonts/STHeiti Light.ttc", 36)
 
 def draw_board(board):
     screen.fill(WHITE)
@@ -142,6 +144,7 @@ def main():
         play_game(agent1, agent2, train=True, show=False)
     print("訓練完成，AI 對戰展示：")
     # 展示對戰
+    LIGHT_GRAY = (200, 200, 200)
     while True:
         for event in pygame.event.get():
             if event.type == pygame.QUIT:
@@ -149,13 +152,12 @@ def main():
                 sys.exit()
         winner = play_game(agent1, agent2, train=False, show=True, delay=0.5)
         if winner == 0:
-            text = font.render("平手!", True, RED)
+            text = font.render("平手!", True, LIGHT_GRAY, BLACK)
         else:
-            text = font.render(f"玩家 {winner} 勝!", True, RED)
+            text = font.render(f"玩家 {winner} 勝!", True, LIGHT_GRAY, BLACK)
         screen.blit(text, (WIDTH // 4, HEIGHT // 2 - 50))
         pygame.display.update()
         time.sleep(2)
-        input("按 Enter 鍵繼續...")
         # 重置畫面
         screen.fill(WHITE)
         pygame.display.update()
