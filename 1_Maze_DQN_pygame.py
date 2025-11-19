@@ -182,7 +182,7 @@ def main():
             if done:
                 break
             # Control frame rate
-            clock.tick(30)
+            clock.tick(90)
 
         agent.update_target_model()
         agent.decay_exploration()
